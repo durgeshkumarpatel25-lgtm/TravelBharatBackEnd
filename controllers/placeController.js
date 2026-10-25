@@ -1,12 +1,32 @@
 const Place = require("../models/Place");
 
+// Helper to normalize image paths (lowercase "images/" for Linux/Vercel compatibility)
+const cleanImage = (img) => {
+  if (!img) return img;
+  let str = img.trim();
+  if (str.toLowerCase().startsWith("images/")) {
+    str = "images/" + str.slice(7);
+  } else if (str.toLowerCase().startsWith("/images/")) {
+    str = "images/" + str.slice(8);
+  }
+  if (str.toLowerCase() === "images/pachmarhi.jpg") {
+    str = "images/pachmarhi.JPG";
+  }
+  return str;
+};
+
 // @desc    Get all places
 // @route   GET /places (and /api/places)
 // @access  Public
 const getAllPlaces = async (req, res) => {
   try {
     const data = await Place.find();
-    res.json(data);
+    const sanitized = data.map(p => {
+      const doc = p.toObject();
+      if (doc.image) doc.image = cleanImage(doc.image);
+      return doc;
+    });
+    res.json(sanitized);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -21,7 +41,9 @@ const getPlaceById = async (req, res) => {
     if (!place) {
       return res.status(404).json({ error: "Place not found" });
     }
-    res.json(place);
+    const doc = place.toObject();
+    if (doc.image) doc.image = cleanImage(doc.image);
+    res.json(doc);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -32,6 +54,7 @@ const getPlaceById = async (req, res) => {
 // @access  Public
 const createPlace = async (req, res) => {
   try {
+    if (req.body.image) req.body.image = cleanImage(req.body.image);
     const newPlace = new Place(req.body);
     await newPlace.save();
     res.status(201).json({ message: "Place added successfully 🔥", data: newPlace });
@@ -45,6 +68,7 @@ const createPlace = async (req, res) => {
 // @access  Public
 const updatePlace = async (req, res) => {
   try {
+    if (req.body.image) req.body.image = cleanImage(req.body.image);
     const updatedPlace = await Place.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -171,11 +195,31 @@ const seedPlaces = async (req, res) => {
   }
 };
 
+// @desc    Fix case-sensitive image paths in MongoDB
+// @route   GET /fix-images
+const fixPlaceImages = async (req, res) => {
+  try {
+    const places = await Place.find({});
+    let updatedCount = 0;
+    for (const p of places) {
+      if (p.image && (p.image.startsWith("Images/") || p.image.startsWith("/images/"))) {
+        p.image = cleanImage(p.image);
+        await p.save();
+        updatedCount++;
+      }
+    }
+    res.json({ message: `Successfully normalized ${updatedCount} places with lowercase image paths.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   getAllPlaces,
   getPlaceById,
   createPlace,
   updatePlace,
   deletePlace,
-  seedPlaces
+  seedPlaces,
+  fixPlaceImages
 };

@@ -6,13 +6,15 @@ const {
   createPlace,
   updatePlace,
   deletePlace,
-  seedPlaces
+  seedPlaces,
+  fixPlaceImages
 } = require("../controllers/placeController");
 
 // Compatibility Routes (Used by existing frontend)
 router.get("/places", getAllPlaces);
 router.post("/add-place", createPlace);
 router.get("/add", seedPlaces);
+router.get("/fix-images", fixPlaceImages);
 
 // Standard RESTful CRUD Routes
 router.get("/api/places", getAllPlaces);
@@ -21,5 +23,6 @@ router.get("/api/places/:id", getPlaceById);
 router.put("/api/places/:id", updatePlace);
 router.delete("/api/places/:id", deletePlace);
 router.post("/api/places/seed", seedPlaces);
+router.get("/api/fix-images", fixPlaceImages);
 
 module.exports = router;
